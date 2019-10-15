@@ -1,7 +1,11 @@
 [package]
 name = "marcesquerra/idristest"
-version = "0.1.1"
+version = "0.1.2-RC"
 authors = []
+description = "A testing framework for idris"
+homepage = "https://github.com/marcesquerra/IdrisTest"
+repository = "https://github.com/marcesquerra/IdrisTest"
+keywords = ["test", "testing"]
 
 [dependencies]
 

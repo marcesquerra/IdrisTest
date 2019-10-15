@@ -2,46 +2,86 @@ module Idristest
 
 import System
 
-public export
-TestResult: Type
-TestResult = (Bool, String)
-
-public export
-TestSuitResult: Type
-TestSuitResult = List TestResult
-
-exists : (a -> Bool) -> List a -> Bool
-exists p l = isJust (find p l)
-
-forall : (a -> Bool) -> List a -> Bool
-forall p l = not (exists (\i => not (p i)) l)
-
-printResults : TestSuitResult -> IO (List Bool)
-printResults   tests = sequence (map (\pair => do putStrLn (snd pair)
-                                                  pure (fst pair)) tests)
-
-runTests : TestSuitResult -> IO Bool
-runTests   tests = map (\l => forall id l) (printResults tests)
+export
+data TestResult = Success | Failure String
 
 export
-assert : Bool -> String -> String -> TestResult
-assert   True    s         f      =  (True, s)
-assert   False   s         f      =  (False, f)
+eval : a -> (a -> TestResult) -> TestResult
+eval a f = f a
+
+term syntax [initial] must [test] = eval initial test
 
 export
-assertEq : (Eq a, Show a) => (label: String) -> (given : a) -> (expected : a) -> TestResult
-assertEq l g e = assert (g == e) (l ++ ": Passed") (l ++ ": Failed\n  GIVEN: " ++ (show g) ++ "\n  EXPECTED: " ++ (show e))
+beTrue : Bool -> TestResult
+beTrue True = Success
+beTrue False = Failure "Expecting True, but got False"
 
 export
-assertNotEq : (Eq a, Show a) => (label: String) -> (given : a) -> (expected : a) -> TestResult
-assertNotEq l g e = assert ( not (g == e)) (l ++ ": Passed") (l ++ ": Failed\n  Both values were expected to be different\n  BOTH ARE: " ++ (show g) ++ "\n  EXPECTED: ")
+beFalse : Bool -> TestResult
+beFalse False = Success
+beFalse True = Failure "Expecting False, but got True"
 
 export
-run : TestSuitResult -> IO ()
-run ts = do r <- runTests ts
-            if r then
-              putStrLn "Success"
-            else (
-              do putStrLn "Failure"
-                 exit 1
-            )
+data Suite = Group String (List Suite) | Test String TestResult
+
+export
+interface SuiteBuilder a where
+  buildSuite : String -> a -> Suite
+
+export
+SuiteBuilder TestResult where
+  buildSuite description tr = Test description tr
+
+export
+SuiteBuilder (List Suite) where
+  buildSuite description ls = Group description ls
+
+term syntax [description] ">>" [content] = buildSuite description content
+
+record SuiteResult where
+  constructor MkSuiteResult
+  successful, failed: Nat
+  out: String
+
+(*) : String -> Nat -> String
+(*) str Z = ""
+(*) str (S n) = str ++ (str * n)
+
+mutual
+  evalSuiteList: (depth: Nat) -> List Suite -> SuiteResult
+  evalSuiteList _ Nil = MkSuiteResult 0 0 ""
+  evalSuiteList d (h :: t) =
+    let
+      headResult = evalSuiteEntry d h
+      tailResult = evalSuiteList d t
+      successfuls = (successful headResult) + (successful tailResult)
+      failures = (failed headResult) + (failed tailResult)
+      fullOut = (out headResult) ++ (out tailResult)
+    in
+      MkSuiteResult successfuls failures fullOut
+
+  evalSuiteEntry: (depth: Nat) -> Suite -> SuiteResult
+  evalSuiteEntry depth (Test desc Success) = MkSuiteResult 1 0 ("  " * depth ++ desc ++ " [✓]\n")
+  evalSuiteEntry depth (Test desc (Failure errorDesc)) = MkSuiteResult 0 1 ("  " * depth ++ desc ++ " [✗]\n" ++ "  " * depth ++ errorDesc ++ "\n\n")
+  evalSuiteEntry depth (Group desc list) =
+    let
+      innerResult = evalSuiteList (depth + 1) list
+      newOut = "  " * depth ++ desc ++ "\n" ++ (out innerResult)
+    in
+      MkSuiteResult (successful innerResult) (failed innerResult) newOut
+
+evalSuite : Suite -> SuiteResult
+evalSuite s = evalSuiteEntry 0 s
+
+export
+run : Suite -> IO ()
+run s =
+  let
+    result = evalSuite s
+    totalTests = (successful result) + (failed result)
+    sufix = if failed result == 0 then "\nSuccessful: " ++ (show (successful result)) ++ "/" ++ (show totalTests) ++ "\n\nSUCCES"
+            else "\nFailed: " ++ (show (failed result)) ++ "/" ++ (show totalTests) ++ "\n\nFAILED"
+    fullOut = (out result) ++ sufix
+  in
+    putStrLn fullOut
+
