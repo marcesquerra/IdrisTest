@@ -79,9 +79,13 @@ run s =
   let
     result = evalSuite s
     totalTests = (successful result) + (failed result)
-    sufix = if failed result == 0 then "\nSuccessful: " ++ (show (successful result)) ++ "/" ++ (show totalTests) ++ "\n\nSUCCES"
+    ok = failed result == 0
+    sufix = if ok then "\nSuccessful: " ++ (show (successful result)) ++ "/" ++ (show totalTests) ++ "\n\nSUCCES"
             else "\nFailed: " ++ (show (failed result)) ++ "/" ++ (show totalTests) ++ "\n\nFAILED"
     fullOut = (out result) ++ sufix
   in
-    putStrLn fullOut
+    do
+      putStrLn fullOut
+      (if ok then pure () else exit 1)
+
 
