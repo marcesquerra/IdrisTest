@@ -15,3 +15,7 @@ mods = [
     "Idristest"
 ]
 
+[[targets.test]]
+path = "tests"
+main = "Tests.runTests"
+

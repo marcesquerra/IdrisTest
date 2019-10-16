@@ -6,6 +6,7 @@ A simple example:
 
 import Idristest
 
+export
 runTests : IO ()
 runTests = run (
   "This is a collection of tests" >> [
