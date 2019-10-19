@@ -1,0 +1,5 @@
+#!/bin/bash
+
+while true; do
+  find . -type f -not -path '\./target/*' -not -path '\./.git/*' | entr -d elba "$@"
+done

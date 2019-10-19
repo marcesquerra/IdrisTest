@@ -1,6 +1,6 @@
 [package]
 name = "marcesquerra/idristest"
-version = "0.1.3"
+version = "0.1.4"
 authors = []
 description = "A testing framework for idris"
 homepage = "https://github.com/marcesquerra/IdrisTest"

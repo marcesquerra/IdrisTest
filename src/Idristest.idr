@@ -1,7 +1,7 @@
 module Idristest
 
 import System
-import public SingleTest
+import public ItemTest
 import Utils
 
 export
